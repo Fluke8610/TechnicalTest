@@ -14,11 +14,22 @@
 
 // CAboutDlg dialog used for App About
 
+struct sConstStrings
+{
+	CString* pListFileSource;
+	CString* pListFileSource2;
+	CString* pTargetFolder1;
+	CString* pTargetFolder2;
+	CString* pMoveFileSource;
+	CString* pMoveFileDest;
+};
+
 struct sCleanupInfo
 {
 	HWND hWndParent;
 	Logger* pLogger;
 	CTechnicalTestApp* pApp;
+	sConstStrings* pStrings;
 };
 
 class CAboutDlg : public CDialogEx
@@ -69,12 +80,12 @@ UINT CleanUpThread(void* pointer)
 	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
 
 	CStringArray aryFilesToMove;
-	FileOperations::ListAllFiles(pInfo->pLogger, _T("C:\\Temp\\TargetFolders\\MoveFileSource\\*.*"), &aryFilesToMove);
+	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pMoveFileSource, &aryFilesToMove);
 
 	for (int nFile = 0; nFile < aryFilesToMove.GetSize(); nFile++)
 	{
 		CString strFile = aryFilesToMove.GetAt(nFile);
-		CString strMoveTo = _T("C:\\Temp\\TargetFolders\\MoveFileDest\\") + FilenameHelpers::GetJustFilename(strFile);
+		CString strMoveTo = *pInfo->pStrings->pMoveFileDest + FilenameHelpers::GetJustFilename(strFile);
 		FileOperations::MoveFileEx_WithRetry(strFile, strMoveTo, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED, pInfo->pLogger, 30);
 	}
 
@@ -87,7 +98,7 @@ UINT CleanUpThread(void* pointer)
 
 	//Example folders
 	CStringArray aryListFileSourceFolders;
-	FileOperations::ListAllFiles(pInfo->pLogger, _T("C:\\Temp\\TargetFolders\\ListFileSource\\*.*"), &aryListFileSourceFolders, true, true);
+	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pListFileSource, &aryListFileSourceFolders, true, true);
 	for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
 	{
 		CString strFolder = aryListFileSourceFolders.GetAt(nFolder) + _T("Folder1");
@@ -97,12 +108,14 @@ UINT CleanUpThread(void* pointer)
 
 	//Example folders
 	CStringArray aryListFileSourceFolders2;
-	FileOperations::ListAllFiles(pInfo->pLogger, _T("C:\\Temp\\TargetFolders\\ListFileSource2\\*.*"), &aryListFileSourceFolders2, true, false);
+	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pListFileSource2, &aryListFileSourceFolders2, true, false);
 
 	for (int nFolder = 0; nFolder < aryListFileSourceFolders2.GetSize(); nFolder++)
 	{
 		CString strFolder = aryListFileSourceFolders2.GetAt(nFolder);
 		strFolder.MakeUpper();
+
+		
 
 		if (strFolder.Find(_T("\\FOLDER1\\")) != -1)
 		{
@@ -129,10 +142,10 @@ UINT CleanUpThread(void* pointer)
 	//Various folders
 	pInfo->pLogger->AddToLogByString(_T("Adding static dirs"));
 
-	aryDirs.Add(_T("C:\\Temp\\TargetFolders\\Folder1\\*.*"));
+	aryDirs.Add(*pInfo->pStrings->pTargetFolder1);
 	aryDays.Add(2);
 
-	aryDirs.Add(_T("C:\\Temp\\TargetFolders\\Folder2\\*.*"));
+	aryDirs.Add(*pInfo->pStrings->pTargetFolder2);
 	aryDays.Add(2);
 
 	if (aryDirs.GetSize() != aryDays.GetSize())
@@ -162,7 +175,7 @@ UINT CleanUpThread(void* pointer)
 			CString strSuffix = strFile.Mid(nDot);
 			strSuffix.MakeUpper();
 
-			if (strSuffix == _T(".XLS") && strFile.Left(13) != _T("C:\\Temp\\TargetFolders\\Folder1"))
+			if (strSuffix == _T(".XLS") && strFile.Left(13) != *pInfo->pStrings->pTargetFolder1)
 				continue;
 
 			if (strSuffix == _T(".BAT"))
@@ -263,8 +276,35 @@ BOOL CTechnicalTestDlg::OnInitDialog()
 	pInfo->pLogger = &m_Logger;
 	pInfo->pApp = (CTechnicalTestApp*)AfxGetApp();
 
+	pInfo->pStrings = new sConstStrings;
+	pInfo->pStrings->pListFileSource = new CString();
+	pInfo->pStrings->pListFileSource2 = new CString();
+	pInfo->pStrings->pTargetFolder1 = new CString();
+	pInfo->pStrings->pTargetFolder2 = new CString();
+	pInfo->pStrings->pMoveFileDest = new CString();
+	pInfo->pStrings->pMoveFileSource = new CString();
+
+
+	if (!pInfo->pStrings->pListFileSource->LoadStringW(IDS_LISTFILESOURCE))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
+	if (!pInfo->pStrings->pListFileSource2->LoadStringW(IDS_LISTFILESOURCE2))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
+	if (!pInfo->pStrings->pTargetFolder1->LoadStringW(IDS_TARGETFOLDER1))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
+	if (!pInfo->pStrings->pTargetFolder2->LoadStringW(IDS_TARGETFOLDER2))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
+	if (!pInfo->pStrings->pMoveFileSource->LoadStringW(IDS_MOVEFILESOURCE))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileSource constant."));
+	if (!pInfo->pStrings->pMoveFileDest->LoadStringW(IDS_MOVEFILEDEST))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileDest constant"));
+
+
 	m_nActiveThreads++;
-	m_Logger.SetLogFile(_T("C:\\Temp\\TechnicalTest.log"));
+	CString logFileName;
+	if (logFileName.LoadStringW(IDS_LOGFILENAME))
+		m_Logger.SetLogFile(logFileName);
+	else
+		m_Logger.SetLogFile(_T("C:\\Temp\\TechnicalTest.log"));
 
 	AfxBeginThread(CleanUpThread, pInfo, THREAD_PRIORITY_NORMAL, 0);
 
