@@ -6,7 +6,6 @@
 
 #include "Logger.h"
 
-
 // CTechnicalTestDlg dialog
 class CTechnicalTestDlg : public CDialogEx
 {

@@ -72,6 +72,48 @@ void FileOperations::ListAllFiles(Logger* pLogger, const CString strMask, CStrin
 	}
 }
 
+// Intention to parse the ini file and map actions
+// 
+bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
+{
+	if (iniFileStr.IsEmpty())
+	{
+		if (pLogger)
+		{
+			pLogger->AddToLogByString(_T("IMPORTANT: Ini file name is blank."));
+		}
+		return false;
+	}
+
+	if (pLogger)
+	{
+		pLogger->AddToLogByString(_T("Parsing Configuration.ini "));
+	}
+
+	CFileFind find;
+	
+	//if (find.IsDirectory())
+	//{
+	//	if (!find.IsDots())
+	//	{
+	//		CString strDir = find.GetFilePath();
+	//		if (flgDirsOnly || flgDirsAlso)
+	//		{
+	//			if (find.FindFile(strDir + iniFileStr))
+	//			{
+
+	//			}
+	//			else
+	//			{
+	//				pLogger->AddToLogByString(_T("IMPORTANT: Unable to find Configuration.ini"));
+	//			}
+	//		}
+	//	}
+	//}
+
+	return true;
+}
+
 bool FileOperations::DeleteFileSecure(Logger* pLogger, const CString& strFile, eFileDeletionAlgorithm nAlgo, DWORD dwTimeoutSecs)
 {
 	if (strFile.IsEmpty())

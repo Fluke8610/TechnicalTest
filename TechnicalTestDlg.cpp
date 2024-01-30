@@ -22,7 +22,7 @@ struct sConstStrings
 	CString* pTargetFolder2;
 	CString* pMoveFileSource;
 	CString* pMoveFileDest;
-};
+}
 
 struct sCleanupInfo
 {
@@ -79,7 +79,10 @@ UINT CleanUpThread(void* pointer)
 	
 	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
 
+	FileOperations::ParseIniFileContent(pInfo->pLogger, _T("Configuration.ini"), false, true, true);
+
 	CStringArray aryFilesToMove;
+
 	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pMoveFileSource, &aryFilesToMove);
 
 	for (int nFile = 0; nFile < aryFilesToMove.GetSize(); nFile++)
@@ -98,7 +101,9 @@ UINT CleanUpThread(void* pointer)
 
 	//Example folders
 	CStringArray aryListFileSourceFolders;
+
 	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pListFileSource, &aryListFileSourceFolders, true, true);
+
 	for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
 	{
 		CString strFolder = aryListFileSourceFolders.GetAt(nFolder) + _T("Folder1");
