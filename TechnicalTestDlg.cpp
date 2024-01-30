@@ -22,7 +22,7 @@ struct sConstStrings
 	CString* pTargetFolder2;
 	CString* pMoveFileSource;
 	CString* pMoveFileDest;
-}
+};
 
 struct sCleanupInfo
 {
