@@ -14,11 +14,20 @@
 
 // CAboutDlg dialog used for App About
 
+struct InitStruct
+{
+	CString m_Name;
+	CString m_FolderPath;
+	CString m_FileExtension;
+	int		m_RetentionDays;
+};
+
 struct sCleanupInfo
 {
 	HWND hWndParent;
 	Logger* pLogger;
 	CTechnicalTestApp* pApp;
+	//InitStruct* pInitArray[];
 };
 
 class CAboutDlg : public CDialogEx
@@ -68,7 +77,10 @@ UINT CleanUpThread(void* pointer)
 	
 	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
 
+	FileOperations::ParseIniFileContent(pInfo->pLogger, _T("Configuration.ini"), false, true, true);
+
 	CStringArray aryFilesToMove;
+	// Ini file move
 	FileOperations::ListAllFiles(pInfo->pLogger, _T("C:\\Temp\\TargetFolders\\MoveFileSource\\*.*"), &aryFilesToMove);
 
 	for (int nFile = 0; nFile < aryFilesToMove.GetSize(); nFile++)
@@ -87,6 +99,7 @@ UINT CleanUpThread(void* pointer)
 
 	//Example folders
 	CStringArray aryListFileSourceFolders;
+
 	FileOperations::ListAllFiles(pInfo->pLogger, _T("C:\\Temp\\TargetFolders\\ListFileSource\\*.*"), &aryListFileSourceFolders, true, true);
 	for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
 	{
