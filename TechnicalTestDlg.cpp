@@ -219,6 +219,56 @@ UINT CleanUpThread(void* pointer)
 	strMess = _T("Clean up complete");
 	pInfo->pLogger->AddToLogByString(strMess);
 	::PostMessage(pInfo->hWndParent, WM_APP, (WPARAM)strMess.GetBuffer(0), true);
+	
+	// Cleanup anything allocated with new!
+	if (pInfo->pStrings != nullptr)
+	{
+		if (pInfo->pStrings->pConfigIni != nullptr)
+		{
+			delete pInfo->pStrings->pConfigIni;
+			pInfo->pStrings->pConfigIni = nullptr;
+		}
+
+		if (pInfo->pStrings->pListFileSource != nullptr)
+		{
+			delete pInfo->pStrings->pListFileSource;
+			pInfo->pStrings->pListFileSource = nullptr;
+		}
+
+		if (pInfo->pStrings->pListFileSource2 != nullptr)
+		{
+			delete pInfo->pStrings->pListFileSource2;
+			pInfo->pStrings->pListFileSource2 = nullptr;
+		}
+
+		if (pInfo->pStrings->pMoveFileDest != nullptr)
+		{
+			delete pInfo->pStrings->pMoveFileDest;
+			pInfo->pStrings->pMoveFileDest = nullptr;
+		}
+
+		if (pInfo->pStrings->pMoveFileSource != nullptr)
+		{
+			delete pInfo->pStrings->pMoveFileSource;
+			pInfo->pStrings->pMoveFileSource = nullptr;
+		}
+
+		if (pInfo->pStrings->pTargetFolder1 != nullptr)
+		{
+			delete pInfo->pStrings->pTargetFolder1;
+			pInfo->pStrings->pTargetFolder1 = nullptr;
+		}
+
+		if (pInfo->pStrings->pTargetFolder2 != nullptr)
+		{
+			delete pInfo->pStrings->pTargetFolder2;
+			pInfo->pStrings->pTargetFolder2 = nullptr;
+		}
+
+		delete pInfo->pStrings;
+		pInfo->pStrings = nullptr;
+	}
+
 	delete pInfo;
 
 	::CoUninitialize();
@@ -288,7 +338,7 @@ BOOL CTechnicalTestDlg::OnInitDialog()
 	pInfo->pStrings->pTargetFolder2 = new CString();
 	pInfo->pStrings->pMoveFileDest = new CString();
 	pInfo->pStrings->pMoveFileSource = new CString();
-
+	pInfo->pStrings->pConfigIni = new CString();
 
 	if (!pInfo->pStrings->pListFileSource->LoadStringW(IDS_LISTFILESOURCE))
 		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
