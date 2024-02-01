@@ -190,6 +190,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigurationActionItem.h" />
     <ClInclude Include="DataConversion.h" />
     <ClInclude Include="FilenameHelpers.h" />
     <ClInclude Include="FileOperations.h" />
@@ -203,6 +204,7 @@
     <ClInclude Include="ThreadPrefixes.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ConfigurationActionItem.cpp" />
     <ClCompile Include="DataConversion.cpp" />
     <ClCompile Include="FilenameHelpers.cpp" />
     <ClCompile Include="FileOperations.cpp" />

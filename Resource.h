@@ -13,8 +13,8 @@
 #define IDS_MOVEFILESOURCE              106
 #define IDS_MOVEFILEDEST                107
 #define IDS_LOGFILENAME                 108
+#define IDS_CONFIGINI                   109
 #define IDR_MAINFRAME                   128
-#define IDS_CONFIGINI                   180
 
 // Next default values for new objects
 // 

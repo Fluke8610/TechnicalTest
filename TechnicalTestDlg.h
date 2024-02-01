@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Logger.h"
+#include "ConfigurationActionItem.h"
 
 // CTechnicalTestDlg dialog
 class CTechnicalTestDlg : public CDialogEx
@@ -15,6 +16,12 @@ public:
 private:
 	int m_nActiveThreads;
 	Logger m_Logger;
+
+	/*
+	* CString for the key
+	* CString array for content - allows for changing configuration key
+	*/
+	CMap<CString*, CString*, ConfigurationActionItem*, ConfigurationActionItem*> m_InitMap;
 
 // Dialog Data
 #ifdef AFX_DESIGN_TIME

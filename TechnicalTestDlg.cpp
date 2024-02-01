@@ -22,13 +22,15 @@ struct sConstStrings
 	CString* pTargetFolder2;
 	CString* pMoveFileSource;
 	CString* pMoveFileDest;
-}
+	CString* pConfigIni;
+};
 
 struct sCleanupInfo
 {
 	HWND hWndParent;
 	Logger* pLogger;
 	CTechnicalTestApp* pApp;
+	CMap<CString*, CString*, ConfigurationActionItem*, ConfigurationActionItem*>* pIniMapping;
 	sConstStrings* pStrings;
 };
 
@@ -78,8 +80,6 @@ UINT CleanUpThread(void* pointer)
 	pInfo->pLogger->AddToLogByString(_T("Cleanup thread started"));
 	
 	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
-
-	FileOperations::ParseIniFileContent(pInfo->pLogger, _T("Configuration.ini"), false, true, true);
 
 	CStringArray aryFilesToMove;
 
@@ -219,6 +219,76 @@ UINT CleanUpThread(void* pointer)
 	strMess = _T("Clean up complete");
 	pInfo->pLogger->AddToLogByString(strMess);
 	::PostMessage(pInfo->hWndParent, WM_APP, (WPARAM)strMess.GetBuffer(0), true);
+	
+	if (pInfo->pIniMapping != nullptr)
+	{
+		POSITION pos = pInfo->pIniMapping->GetStartPosition();
+		for (int nMap = 0; pos != NULL; nMap++)
+		{
+			CString* key;
+			ConfigurationActionItem* item = nullptr;
+			pInfo->pIniMapping->GetNextAssoc(pos, key, item);
+
+			if (item != nullptr)
+			{
+				delete item;
+				item = nullptr;
+			}
+		}
+
+		pInfo->pIniMapping->RemoveAll();
+
+	}	
+
+	// Cleanup anything allocated with new!
+	if (pInfo->pStrings != nullptr)
+	{
+		if (pInfo->pStrings->pConfigIni != nullptr)
+		{
+			delete pInfo->pStrings->pConfigIni;
+			pInfo->pStrings->pConfigIni = nullptr;
+		}
+
+		if (pInfo->pStrings->pListFileSource != nullptr)
+		{
+			delete pInfo->pStrings->pListFileSource;
+			pInfo->pStrings->pListFileSource = nullptr;
+		}
+
+		if (pInfo->pStrings->pListFileSource2 != nullptr)
+		{
+			delete pInfo->pStrings->pListFileSource2;
+			pInfo->pStrings->pListFileSource2 = nullptr;
+		}
+
+		if (pInfo->pStrings->pMoveFileDest != nullptr)
+		{
+			delete pInfo->pStrings->pMoveFileDest;
+			pInfo->pStrings->pMoveFileDest = nullptr;
+		}
+
+		if (pInfo->pStrings->pMoveFileSource != nullptr)
+		{
+			delete pInfo->pStrings->pMoveFileSource;
+			pInfo->pStrings->pMoveFileSource = nullptr;
+		}
+
+		if (pInfo->pStrings->pTargetFolder1 != nullptr)
+		{
+			delete pInfo->pStrings->pTargetFolder1;
+			pInfo->pStrings->pTargetFolder1 = nullptr;
+		}
+
+		if (pInfo->pStrings->pTargetFolder2 != nullptr)
+		{
+			delete pInfo->pStrings->pTargetFolder2;
+			pInfo->pStrings->pTargetFolder2 = nullptr;
+		}
+
+		delete pInfo->pStrings;
+		pInfo->pStrings = nullptr;
+	}
+
 	delete pInfo;
 
 	::CoUninitialize();
@@ -280,6 +350,7 @@ BOOL CTechnicalTestDlg::OnInitDialog()
 	pInfo->hWndParent = m_hWnd;
 	pInfo->pLogger = &m_Logger;
 	pInfo->pApp = (CTechnicalTestApp*)AfxGetApp();
+	pInfo->pIniMapping = &m_InitMap;
 
 	pInfo->pStrings = new sConstStrings;
 	pInfo->pStrings->pListFileSource = new CString();
@@ -288,10 +359,19 @@ BOOL CTechnicalTestDlg::OnInitDialog()
 	pInfo->pStrings->pTargetFolder2 = new CString();
 	pInfo->pStrings->pMoveFileDest = new CString();
 	pInfo->pStrings->pMoveFileSource = new CString();
+	pInfo->pStrings->pConfigIni = new CString();
 
+	if (!pInfo->pStrings->pConfigIni->LoadStringW(IDS_CONFIGINI))
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load Configuration.ini constant"));
+
+	FileOperations::ParseIniFileContent(pInfo->pLogger, *pInfo->pStrings->pConfigIni, pInfo->pIniMapping, false, true, true);
+
+	/*
+	* TODO: Sort out start up config load for determining actions, remove IDS_ for all but config
+	*/
 
 	if (!pInfo->pStrings->pListFileSource->LoadStringW(IDS_LISTFILESOURCE))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource constant."));
 	if (!pInfo->pStrings->pListFileSource2->LoadStringW(IDS_LISTFILESOURCE2))
 		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
 	if (!pInfo->pStrings->pTargetFolder1->LoadStringW(IDS_TARGETFOLDER1))
@@ -302,7 +382,6 @@ BOOL CTechnicalTestDlg::OnInitDialog()
 		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileSource constant."));
 	if (!pInfo->pStrings->pMoveFileDest->LoadStringW(IDS_MOVEFILEDEST))
 		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileDest constant"));
-
 
 	m_nActiveThreads++;
 	CString logFileName;
