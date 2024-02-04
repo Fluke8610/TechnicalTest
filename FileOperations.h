@@ -1,5 +1,6 @@
 #pragma once
 #include "Logger.h"
+#include "ConfigurationActionItem.h"
 
 #define DEFAULT_MOVE_FILE_RETRY_SECS 30
 
@@ -19,10 +20,8 @@ public:
 	static bool MoveFileEx_WithRetry(const CString& strSource, const CString& strDest, INT32 nFlags, Logger* pLogger, INT32 nRetrySecs = 0);
 	static void ListAllFiles(Logger* pLogger, CString str, CStringArray* pstrFiles, bool flgDirsOnly = false, bool flgDontRecurse = false, bool flgDirsAlso = false, DWORD dwListAllFilesFlags = 0);
 	
-	// Ini file
-	// Here I wanted to use CMap, but had issues with CString as a key, couldn't match the correct key value.
-	// This took more time than I wanted and left little time for other things
-	static bool ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso);
+	// INI File
+	static bool ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso);
 
 private:
 	static bool DeleteFile_WithRetry_StandardWindowsAlgo(const CString& strFile, Logger* pLogger, INT32 nRetrySecs);

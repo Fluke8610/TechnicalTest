@@ -74,8 +74,10 @@ void FileOperations::ListAllFiles(Logger* pLogger, const CString strMask, CStrin
 
 // Intention to parse the ini file and map actions
 // 
-bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
+bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
 {
+
+	// Check against empty ini string
 	if (iniFileStr.IsEmpty())
 	{
 		if (pLogger)
@@ -84,32 +86,120 @@ bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFile
 		}
 		return false;
 	}
-
+	
+	// Check we still have our logger
 	if (pLogger)
 	{
 		pLogger->AddToLogByString(_T("Parsing Configuration.ini "));
 	}
 
-	CFileFind find;
-	
-	//if (find.IsDirectory())
-	//{
-	//	if (!find.IsDots())
-	//	{
-	//		CString strDir = find.GetFilePath();
-	//		if (flgDirsOnly || flgDirsAlso)
-	//		{
-	//			if (find.FindFile(strDir + iniFileStr))
-	//			{
+	// initial file declaration
+	CFile file;
+	// File content
+	CStringArray content;
 
-	//			}
-	//			else
-	//			{
-	//				pLogger->AddToLogByString(_T("IMPORTANT: Unable to find Configuration.ini"));
-	//			}
-	//		}
-	//	}
-	//}
+	if (FileOperations::DoesFileExist(iniFileStr))
+	{
+
+		try
+		{
+			if (file.Open(iniFileStr, CFile::modeRead | CFile::typeUnicode))
+			{
+
+				// Get file length
+				ULONGLONG fLength = file.GetLength();
+				// Num read by CFile::Read()
+				UINT nActual = 0;
+				// Buffer for Unicode file content
+				TCHAR szBuffer[1024];
+				memset(&szBuffer, 0, fLength + 1);
+				// Read to buffer
+				nActual = file.Read(szBuffer, fLength);
+
+				szBuffer[fLength] = '\0';
+
+				CStringW c;
+				// Took me longer than I would like to admit to find this string format........
+				c.Format(_T("%hs"), szBuffer);
+
+				int rpos = c.ReverseFind('"');
+
+				c.ReleaseBufferSetLength(rpos + 1);
+				// May be neccessary to Null terminate.
+				c.Insert(rpos + 1, _T("\0"));
+
+				CStringW res;
+				int currentPos = 0;
+
+				// Tokenize the strings
+
+				res = c.Tokenize(_T("\r\n"), currentPos);
+				while (res != _T(""))
+				{
+					pLogger->AddToLogByString(res);
+
+					if (res.CompareNoCase(_T("[TechnicalTestConfiguration]")) != 0)
+					{
+						content.Add(res);
+					}
+
+					res = c.Tokenize(_T("\r\n"), currentPos);
+				}
+
+				for (int i = 0; i < content.GetCount(); i++)
+				{
+					ConfigurationActionItem* cfg = new ConfigurationActionItem(&content[i]);
+					
+					CArray<ConfigurationActionItem*>* itemArray;
+					
+					if (initMapping->Lookup(cfg->GetActionName(), itemArray) != 0)
+					{
+						if (itemArray != nullptr)
+						{
+							itemArray->Add(cfg);
+							initMapping->SetAt(cfg->GetActionName(), itemArray);
+						}
+					}
+					else
+					{
+						itemArray = new CArray<ConfigurationActionItem*>();
+						if (itemArray != nullptr)
+						{
+							itemArray->Add(cfg);
+							initMapping->SetAt(cfg->GetActionName(), itemArray);
+						}
+						
+					}
+					
+				}
+
+			}
+			else
+			{
+				pLogger->AddToLogByString(_T("IMPORTANT: Failed to open file for reading."));
+				return false;
+			}
+		}
+		catch (const CFileException* pEx)
+		{
+			// TODO : Better exception handling
+			pLogger->AddToLogByString(_T("Important: Configuration File exception. "));
+		}
+		catch (const CMemoryException* pEx)
+		{
+			// TODO : Better exception handling
+			pLogger->AddToLogByString(_T("Important: Configuration File memory exception. "));
+		}
+
+		file.Close();
+		
+	}
+
+	if (initMapping->GetCount() > 0)
+	{
+		pLogger->AddToLogByString(_T("IMPORTANT: Mapping has content."));
+	}
+	
 
 	return true;
 }
