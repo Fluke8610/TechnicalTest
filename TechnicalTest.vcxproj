@@ -107,6 +107,13 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copy ini file to target folder.</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -183,6 +190,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConfigurationActionItem.h" />
     <ClInclude Include="DataConversion.h" />
     <ClInclude Include="FilenameHelpers.h" />
     <ClInclude Include="FileOperations.h" />
@@ -196,6 +204,7 @@
     <ClInclude Include="ThreadPrefixes.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ConfigurationActionItem.cpp" />
     <ClCompile Include="DataConversion.cpp" />
     <ClCompile Include="FilenameHelpers.cpp" />
     <ClCompile Include="FileOperations.cpp" />

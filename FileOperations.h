@@ -1,5 +1,6 @@
 #pragma once
 #include "Logger.h"
+#include "ConfigurationActionItem.h"
 
 #define DEFAULT_MOVE_FILE_RETRY_SECS 30
 
@@ -18,6 +19,9 @@ public:
 	static bool CreateFullPath(CString strPath, DWORD* pdwWinErr = NULL, INT32 nStartAt = -1, INT32 nRetrySecs = 0);
 	static bool MoveFileEx_WithRetry(const CString& strSource, const CString& strDest, INT32 nFlags, Logger* pLogger, INT32 nRetrySecs = 0);
 	static void ListAllFiles(Logger* pLogger, CString str, CStringArray* pstrFiles, bool flgDirsOnly = false, bool flgDontRecurse = false, bool flgDirsAlso = false, DWORD dwListAllFilesFlags = 0);
+	
+	// INI File
+	static bool ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso);
 
 private:
 	static bool DeleteFile_WithRetry_StandardWindowsAlgo(const CString& strFile, Logger* pLogger, INT32 nRetrySecs);
