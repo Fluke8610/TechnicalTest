@@ -30,7 +30,7 @@ struct sCleanupInfo
 	HWND hWndParent;
 	Logger* pLogger;
 	CTechnicalTestApp* pApp;
-	CMap<CString*, CString*, ConfigurationActionItem*, ConfigurationActionItem*>* pIniMapping;
+	CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* pIniMapping;
 	sConstStrings* pStrings;
 };
 
@@ -67,6 +67,98 @@ END_MESSAGE_MAP()
 
 // CTechnicalTestDlg dialog
 
+void CleanUp(void* pointer)
+{
+
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
+
+	if (pInfo->pIniMapping != nullptr)
+	{
+		POSITION pos = pInfo->pIniMapping->GetStartPosition();
+		for (int nMap = 0; pos != NULL; nMap++)
+		{
+			CString* key;
+			CArray<ConfigurationActionItem*>* items = nullptr;
+			pInfo->pIniMapping->GetNextAssoc(pos, key, items);
+
+			if (items != nullptr)
+			{
+				for (int iMap = items->GetCount() - 1; iMap >= 0; iMap--)
+				{
+					if (items->GetAt(iMap) != nullptr)
+					{
+						ConfigurationActionItem* itm = items->ElementAt(iMap);
+						items->RemoveAt(iMap);
+
+						if (itm != nullptr)
+						{
+							delete itm;
+							itm = nullptr;
+						}
+					}
+				}
+
+				delete items;
+				items = nullptr;
+			}
+		}
+
+		pInfo->pIniMapping->RemoveAll();
+
+	}
+
+	// Cleanup anything allocated with new!
+	if (pInfo->pStrings != nullptr)
+	{
+		if (pInfo->pStrings->pConfigIni != nullptr)
+		{
+			delete pInfo->pStrings->pConfigIni;
+			pInfo->pStrings->pConfigIni = nullptr;
+		}
+
+		if (pInfo->pStrings->pListFileSource != nullptr)
+		{
+			delete pInfo->pStrings->pListFileSource;
+			pInfo->pStrings->pListFileSource = nullptr;
+		}
+
+		if (pInfo->pStrings->pListFileSource2 != nullptr)
+		{
+			delete pInfo->pStrings->pListFileSource2;
+			pInfo->pStrings->pListFileSource2 = nullptr;
+		}
+
+		if (pInfo->pStrings->pMoveFileDest != nullptr)
+		{
+			delete pInfo->pStrings->pMoveFileDest;
+			pInfo->pStrings->pMoveFileDest = nullptr;
+		}
+
+		if (pInfo->pStrings->pMoveFileSource != nullptr)
+		{
+			delete pInfo->pStrings->pMoveFileSource;
+			pInfo->pStrings->pMoveFileSource = nullptr;
+		}
+
+		if (pInfo->pStrings->pTargetFolder1 != nullptr)
+		{
+			delete pInfo->pStrings->pTargetFolder1;
+			pInfo->pStrings->pTargetFolder1 = nullptr;
+		}
+
+		if (pInfo->pStrings->pTargetFolder2 != nullptr)
+		{
+			delete pInfo->pStrings->pTargetFolder2;
+			pInfo->pStrings->pTargetFolder2 = nullptr;
+		}
+
+		delete pInfo->pStrings;
+		pInfo->pStrings = nullptr;
+	}
+
+	delete pInfo;
+}
+
 UINT CleanUpThread(void* pointer)
 {
 	CString strMess;
@@ -78,7 +170,6 @@ UINT CleanUpThread(void* pointer)
 	HRESULT res = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
 
 	pInfo->pLogger->AddToLogByString(_T("Cleanup thread started"));
-	
 	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
 
 	CStringArray aryFilesToMove;
@@ -219,77 +310,8 @@ UINT CleanUpThread(void* pointer)
 	strMess = _T("Clean up complete");
 	pInfo->pLogger->AddToLogByString(strMess);
 	::PostMessage(pInfo->hWndParent, WM_APP, (WPARAM)strMess.GetBuffer(0), true);
-	
-	if (pInfo->pIniMapping != nullptr)
-	{
-		POSITION pos = pInfo->pIniMapping->GetStartPosition();
-		for (int nMap = 0; pos != NULL; nMap++)
-		{
-			CString* key;
-			ConfigurationActionItem* item = nullptr;
-			pInfo->pIniMapping->GetNextAssoc(pos, key, item);
 
-			if (item != nullptr)
-			{
-				delete item;
-				item = nullptr;
-			}
-		}
-
-		pInfo->pIniMapping->RemoveAll();
-
-	}	
-
-	// Cleanup anything allocated with new!
-	if (pInfo->pStrings != nullptr)
-	{
-		if (pInfo->pStrings->pConfigIni != nullptr)
-		{
-			delete pInfo->pStrings->pConfigIni;
-			pInfo->pStrings->pConfigIni = nullptr;
-		}
-
-		if (pInfo->pStrings->pListFileSource != nullptr)
-		{
-			delete pInfo->pStrings->pListFileSource;
-			pInfo->pStrings->pListFileSource = nullptr;
-		}
-
-		if (pInfo->pStrings->pListFileSource2 != nullptr)
-		{
-			delete pInfo->pStrings->pListFileSource2;
-			pInfo->pStrings->pListFileSource2 = nullptr;
-		}
-
-		if (pInfo->pStrings->pMoveFileDest != nullptr)
-		{
-			delete pInfo->pStrings->pMoveFileDest;
-			pInfo->pStrings->pMoveFileDest = nullptr;
-		}
-
-		if (pInfo->pStrings->pMoveFileSource != nullptr)
-		{
-			delete pInfo->pStrings->pMoveFileSource;
-			pInfo->pStrings->pMoveFileSource = nullptr;
-		}
-
-		if (pInfo->pStrings->pTargetFolder1 != nullptr)
-		{
-			delete pInfo->pStrings->pTargetFolder1;
-			pInfo->pStrings->pTargetFolder1 = nullptr;
-		}
-
-		if (pInfo->pStrings->pTargetFolder2 != nullptr)
-		{
-			delete pInfo->pStrings->pTargetFolder2;
-			pInfo->pStrings->pTargetFolder2 = nullptr;
-		}
-
-		delete pInfo->pStrings;
-		pInfo->pStrings = nullptr;
-	}
-
-	delete pInfo;
+	CleanUp(pInfo);
 
 	::CoUninitialize();
 	return 0;
@@ -297,20 +319,70 @@ UINT CleanUpThread(void* pointer)
 
 CTechnicalTestDlg::CTechnicalTestDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_TECHNICALTEST_DIALOG, pParent)
+	, m_filePath(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_nActiveThreads = 0;
 }
 
+sCleanupInfo* CTechnicalTestDlg::InitialiseStructures(CString fPath)
+{
+	// TODO: Add extra initialization here
+	sCleanupInfo* pInfo = new sCleanupInfo;
+	pInfo->hWndParent = m_hWnd;
+	pInfo->pLogger = &m_Logger;
+	pInfo->pApp = (CTechnicalTestApp*)AfxGetApp();
+	pInfo->pIniMapping = &m_InitMap;
+
+	pInfo->pStrings = new sConstStrings;
+	pInfo->pStrings->pListFileSource = new CString();
+	pInfo->pStrings->pListFileSource2 = new CString();
+	pInfo->pStrings->pTargetFolder1 = new CString();
+	pInfo->pStrings->pTargetFolder2 = new CString();
+	pInfo->pStrings->pMoveFileDest = new CString();
+	pInfo->pStrings->pMoveFileSource = new CString();
+	pInfo->pStrings->pConfigIni = new CString();
+
+	if (!fPath.IsEmpty())
+	{
+		pInfo->pStrings->pConfigIni->SetString(m_filePath);
+	}
+	else if (!pInfo->pStrings->pConfigIni->LoadStringW(IDS_CONFIGINI))
+	{
+		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load Configuration.ini constant"));
+
+		if (!pInfo->pStrings->pListFileSource->LoadStringW(IDS_LISTFILESOURCE))
+			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource constant."));
+		if (!pInfo->pStrings->pListFileSource2->LoadStringW(IDS_LISTFILESOURCE2))
+			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
+		if (!pInfo->pStrings->pTargetFolder1->LoadStringW(IDS_TARGETFOLDER1))
+			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
+		if (!pInfo->pStrings->pTargetFolder2->LoadStringW(IDS_TARGETFOLDER2))
+			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
+		if (!pInfo->pStrings->pMoveFileSource->LoadStringW(IDS_MOVEFILESOURCE))
+			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileSource constant."));
+		if (!pInfo->pStrings->pMoveFileDest->LoadStringW(IDS_MOVEFILEDEST))
+			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileDest constant"));
+	}
+
+	FileOperations::ParseIniFileContent(pInfo->pLogger, *pInfo->pStrings->pConfigIni, 
+								pInfo->pIniMapping, false, true, true);
+
+	return pInfo;
+}
+
 void CTechnicalTestDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Text(pDX, IDC_FILEBROWSECONTROL, m_filePath);
 }
 
 BEGIN_MESSAGE_MAP(CTechnicalTestDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_EN_CHANGE(IDC_FILEBROWSECONTROL, &CTechnicalTestDlg::OnEnChangeFilebrowsecontrol)
+	ON_BN_CLICKED(IDC_LOADINIBTN, &CTechnicalTestDlg::OnBnClickedLoadinibtn)
 END_MESSAGE_MAP()
 
 
@@ -345,52 +417,12 @@ BOOL CTechnicalTestDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	// TODO: Add extra initialization here
-	sCleanupInfo* pInfo = new sCleanupInfo;
-	pInfo->hWndParent = m_hWnd;
-	pInfo->pLogger = &m_Logger;
-	pInfo->pApp = (CTechnicalTestApp*)AfxGetApp();
-	pInfo->pIniMapping = &m_InitMap;
-
-	pInfo->pStrings = new sConstStrings;
-	pInfo->pStrings->pListFileSource = new CString();
-	pInfo->pStrings->pListFileSource2 = new CString();
-	pInfo->pStrings->pTargetFolder1 = new CString();
-	pInfo->pStrings->pTargetFolder2 = new CString();
-	pInfo->pStrings->pMoveFileDest = new CString();
-	pInfo->pStrings->pMoveFileSource = new CString();
-	pInfo->pStrings->pConfigIni = new CString();
-
-	if (!pInfo->pStrings->pConfigIni->LoadStringW(IDS_CONFIGINI))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load Configuration.ini constant"));
-
-	FileOperations::ParseIniFileContent(pInfo->pLogger, *pInfo->pStrings->pConfigIni, pInfo->pIniMapping, false, true, true);
-
-	/*
-	* TODO: Sort out start up config load for determining actions, remove IDS_ for all but config
-	*/
-
-	if (!pInfo->pStrings->pListFileSource->LoadStringW(IDS_LISTFILESOURCE))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource constant."));
-	if (!pInfo->pStrings->pListFileSource2->LoadStringW(IDS_LISTFILESOURCE2))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
-	if (!pInfo->pStrings->pTargetFolder1->LoadStringW(IDS_TARGETFOLDER1))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
-	if (!pInfo->pStrings->pTargetFolder2->LoadStringW(IDS_TARGETFOLDER2))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
-	if (!pInfo->pStrings->pMoveFileSource->LoadStringW(IDS_MOVEFILESOURCE))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileSource constant."));
-	if (!pInfo->pStrings->pMoveFileDest->LoadStringW(IDS_MOVEFILEDEST))
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileDest constant"));
-
 	m_nActiveThreads++;
 	CString logFileName;
 	if (logFileName.LoadStringW(IDS_LOGFILENAME))
 		m_Logger.SetLogFile(logFileName);
 	else
 		m_Logger.SetLogFile(_T("C:\\Temp\\TechnicalTest.log"));
-
-	AfxBeginThread(CleanUpThread, pInfo, THREAD_PRIORITY_NORMAL, 0);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -465,4 +497,23 @@ LRESULT CTechnicalTestDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam
 	}
 
 	return CDialog::WindowProc(message, wParam, lParam);
+}
+
+void CTechnicalTestDlg::OnEnChangeFilebrowsecontrol()
+{
+	// TODO:  If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+	UpdateData(TRUE);
+	// TODO:  Add your control notification handler code here
+	AfxMessageBox(_T("File chosen " + m_filePath));
+}
+
+void CTechnicalTestDlg::OnBnClickedLoadinibtn()
+{
+	sCleanupInfo* pInfo = m_filePath.IsEmpty() == false ? InitialiseStructures(m_filePath) : InitialiseStructures(_T(""));
+
+	// TODO: Add your control notification handler code here
+	AfxBeginThread(CleanUpThread, pInfo, THREAD_PRIORITY_NORMAL, 0);
 }

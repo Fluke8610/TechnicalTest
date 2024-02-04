@@ -21,7 +21,7 @@ public:
 	static void ListAllFiles(Logger* pLogger, CString str, CStringArray* pstrFiles, bool flgDirsOnly = false, bool flgDontRecurse = false, bool flgDirsAlso = false, DWORD dwListAllFilesFlags = 0);
 	
 	// INI File
-	static bool ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, ConfigurationActionItem*, ConfigurationActionItem*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso);
+	static bool ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso);
 
 private:
 	static bool DeleteFile_WithRetry_StandardWindowsAlgo(const CString& strFile, Logger* pLogger, INT32 nRetrySecs);

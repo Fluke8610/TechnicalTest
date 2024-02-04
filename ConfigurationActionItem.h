@@ -34,7 +34,7 @@ protected:
 	CString* pActionName		= nullptr;
 	CString* pFolderPath		= nullptr;
 	CString* pFileExtensions	= nullptr;
-	CString*	 pRetentionDays		= nullptr;
+	CString* pRetentionDays		= nullptr;
 
 
 };

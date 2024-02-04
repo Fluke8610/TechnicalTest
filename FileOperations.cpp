@@ -74,7 +74,7 @@ void FileOperations::ListAllFiles(Logger* pLogger, const CString strMask, CStrin
 
 // Intention to parse the ini file and map actions
 // 
-bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, ConfigurationActionItem*, ConfigurationActionItem*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
+bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
 {
 
 	// Check against empty ini string
@@ -149,7 +149,28 @@ bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFile
 				for (int i = 0; i < content.GetCount(); i++)
 				{
 					ConfigurationActionItem* cfg = new ConfigurationActionItem(&content[i]);
-					initMapping->SetAt(cfg->GetActionName(), cfg);
+					
+					CArray<ConfigurationActionItem*>* itemArray;
+					
+					if (initMapping->Lookup(cfg->GetActionName(), itemArray) != 0)
+					{
+						if (itemArray != nullptr)
+						{
+							itemArray->Add(cfg);
+							initMapping->SetAt(cfg->GetActionName(), itemArray);
+						}
+					}
+					else
+					{
+						itemArray = new CArray<ConfigurationActionItem*>();
+						if (itemArray != nullptr)
+						{
+							itemArray->Add(cfg);
+							initMapping->SetAt(cfg->GetActionName(), itemArray);
+						}
+						
+					}
+					
 				}
 
 			}

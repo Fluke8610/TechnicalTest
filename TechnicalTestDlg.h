@@ -19,10 +19,12 @@ private:
 
 	/*
 	* CString for the key
-	* CString array for content - allows for changing configuration key
+	* Array of configuration items, class holds an Conf object, can have multiple of the same action.
 	*/
-	CMap<CString*, CString*, ConfigurationActionItem*, ConfigurationActionItem*> m_InitMap;
+	CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*> m_InitMap;
 
+	struct sCleanupInfo* InitialiseStructures(CString fPath = _T(""));
+	
 // Dialog Data
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_TECHNICALTEST_DIALOG };
@@ -43,4 +45,8 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnEnChangeFilebrowsecontrol();
+	CString m_filePath;
+	afx_msg void OnBnClickedLoadinibtn();
 };
