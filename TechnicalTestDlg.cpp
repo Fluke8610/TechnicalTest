@@ -12,27 +12,9 @@
 #include "FileOperations.h"
 #include "FilenameHelpers.h"
 
+#include <stdlib.h>
+
 // CAboutDlg dialog used for App About
-
-struct sConstStrings
-{
-	CString* pListFileSource;
-	CString* pListFileSource2;
-	CString* pTargetFolder1;
-	CString* pTargetFolder2;
-	CString* pMoveFileSource;
-	CString* pMoveFileDest;
-	CString* pConfigIni;
-};
-
-struct sCleanupInfo
-{
-	HWND hWndParent;
-	Logger* pLogger;
-	CTechnicalTestApp* pApp;
-	CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* pIniMapping;
-	sConstStrings* pStrings;
-};
 
 class CAboutDlg : public CDialogEx
 {
@@ -69,7 +51,6 @@ END_MESSAGE_MAP()
 
 void CleanUp(void* pointer)
 {
-
 	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
 
 	if (pInfo->pIniMapping != nullptr)
@@ -77,29 +58,33 @@ void CleanUp(void* pointer)
 		POSITION pos = pInfo->pIniMapping->GetStartPosition();
 		for (int nMap = 0; pos != NULL; nMap++)
 		{
-			CString* key;
-			CArray<ConfigurationActionItem*>* items = nullptr;
+			CString key;
+			void* items;
 			pInfo->pIniMapping->GetNextAssoc(pos, key, items);
 
 			if (items != nullptr)
 			{
-				for (int iMap = items->GetCount() - 1; iMap >= 0; iMap--)
+				CArray<ConfigurationActionItem*>* itm = (CArray<ConfigurationActionItem*>*)items;
+				if (itm != nullptr)
 				{
-					if (items->GetAt(iMap) != nullptr)
+					for (int iMap = (int)itm->GetCount() - 1; iMap >= 0; iMap--)
 					{
-						ConfigurationActionItem* itm = items->ElementAt(iMap);
-						items->RemoveAt(iMap);
-
-						if (itm != nullptr)
+						if (itm->GetAt(iMap) != nullptr)
 						{
-							delete itm;
-							itm = nullptr;
+							ConfigurationActionItem* it = itm->ElementAt(iMap);
+							itm->RemoveAt(iMap);
+
+							if (it != nullptr)
+							{
+								delete it;
+								it = nullptr;
+							}
 						}
 					}
-				}
 
-				delete items;
-				items = nullptr;
+					delete itm;
+					itm = nullptr;
+				}
 			}
 		}
 
@@ -107,155 +92,46 @@ void CleanUp(void* pointer)
 
 	}
 
-	// Cleanup anything allocated with new!
-	if (pInfo->pStrings != nullptr)
-	{
-		if (pInfo->pStrings->pConfigIni != nullptr)
-		{
-			delete pInfo->pStrings->pConfigIni;
-			pInfo->pStrings->pConfigIni = nullptr;
-		}
-
-		if (pInfo->pStrings->pListFileSource != nullptr)
-		{
-			delete pInfo->pStrings->pListFileSource;
-			pInfo->pStrings->pListFileSource = nullptr;
-		}
-
-		if (pInfo->pStrings->pListFileSource2 != nullptr)
-		{
-			delete pInfo->pStrings->pListFileSource2;
-			pInfo->pStrings->pListFileSource2 = nullptr;
-		}
-
-		if (pInfo->pStrings->pMoveFileDest != nullptr)
-		{
-			delete pInfo->pStrings->pMoveFileDest;
-			pInfo->pStrings->pMoveFileDest = nullptr;
-		}
-
-		if (pInfo->pStrings->pMoveFileSource != nullptr)
-		{
-			delete pInfo->pStrings->pMoveFileSource;
-			pInfo->pStrings->pMoveFileSource = nullptr;
-		}
-
-		if (pInfo->pStrings->pTargetFolder1 != nullptr)
-		{
-			delete pInfo->pStrings->pTargetFolder1;
-			pInfo->pStrings->pTargetFolder1 = nullptr;
-		}
-
-		if (pInfo->pStrings->pTargetFolder2 != nullptr)
-		{
-			delete pInfo->pStrings->pTargetFolder2;
-			pInfo->pStrings->pTargetFolder2 = nullptr;
-		}
-
-		delete pInfo->pStrings;
-		pInfo->pStrings = nullptr;
-	}
-
 	delete pInfo;
 }
 
-UINT CleanUpThread(void* pointer)
+void Move(void* pointer)
 {
-	CString strMess;
 	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
-	CWaitCursor wait;
-
-	COleDateTime dtNow = COleDateTime::GetCurrentTime();
-
-	HRESULT res = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
-
-	pInfo->pLogger->AddToLogByString(_T("Cleanup thread started"));
-	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
 
 	CStringArray aryFilesToMove;
 
-	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pMoveFileSource, &aryFilesToMove);
+	void* ptr = nullptr;
+	pInfo->pIniMapping->Lookup(_T("Move"), ptr);
 
-	for (int nFile = 0; nFile < aryFilesToMove.GetSize(); nFile++)
+	if (ptr != nullptr)
 	{
-		CString strFile = aryFilesToMove.GetAt(nFile);
-		CString strMoveTo = *pInfo->pStrings->pMoveFileDest + FilenameHelpers::GetJustFilename(strFile);
-		FileOperations::MoveFileEx_WithRetry(strFile, strMoveTo, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED, pInfo->pLogger, 30);
-	}
-
-	pInfo->pLogger->AddToLogByString(_T("Scanning"));
-
-	CStringArray aryDirs;
-	aryDirs.SetSize(0, 1000);
-	CDWordArray aryDays;
-	aryDays.SetSize(0, 1000);
-
-	//Example folders
-	CStringArray aryListFileSourceFolders;
-
-	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pListFileSource, &aryListFileSourceFolders, true, true);
-
-	for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
-	{
-		CString strFolder = aryListFileSourceFolders.GetAt(nFolder) + _T("Folder1");
-		aryDirs.Add(strFolder + "\\*.*");
-		aryDays.Add(2);
-	}
-
-	//Example folders
-	CStringArray aryListFileSourceFolders2;
-	FileOperations::ListAllFiles(pInfo->pLogger, *pInfo->pStrings->pListFileSource2, &aryListFileSourceFolders2, true, false);
-
-	for (int nFolder = 0; nFolder < aryListFileSourceFolders2.GetSize(); nFolder++)
-	{
-		CString strFolder = aryListFileSourceFolders2.GetAt(nFolder);
-		strFolder.MakeUpper();
-
-		
-
-		if (strFolder.Find(_T("\\FOLDER1\\")) != -1)
+		CArray<ConfigurationActionItem*>* items = (CArray<ConfigurationActionItem*>*)ptr;
+		if (items != nullptr)
 		{
-			aryDirs.Add(strFolder + "*.*");
-			aryDays.Add(2);
-		}
-		else if (strFolder.Find(_T("\\FOLDER2\\")) != -1)
-		{
-			aryDirs.Add(strFolder + "*.*");
-			aryDays.Add(2);
-		}
-		else if (strFolder.Find(_T("\\FOLDER3\\")) != -1)
-		{
-			aryDirs.Add(strFolder + "*.*");
-			aryDays.Add(2);
-		}
-		else
-		{
-			aryDirs.Add(strFolder + "*.*");
-			aryDays.Add(2);
+			for (int i = 0; i < (int)items->GetCount(); i++)
+			{
+				FileOperations::ListAllFiles(pInfo->pLogger, *items->GetAt(i)->GetFolderPath(), &aryFilesToMove);
+
+				for (int nFile = 0; nFile < aryFilesToMove.GetSize(); nFile++)
+				{
+					CString strFile = aryFilesToMove.GetAt(nFile);
+					CString strMoveTo = *items->GetAt(i)->GetFolderPath() + FilenameHelpers::GetJustFilename(strFile);
+					FileOperations::MoveFileEx_WithRetry(strFile, strMoveTo, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED, pInfo->pLogger, 30);
+				}
+			}
 		}
 	}
+}
 
-	//Various folders
-	pInfo->pLogger->AddToLogByString(_T("Adding static dirs"));
+void Delete(void* pointer, CStringArray* aryDirs, CDWordArray* aryDays)
+{
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
 
-	aryDirs.Add(*pInfo->pStrings->pTargetFolder1);
-	aryDays.Add(2);
-
-	aryDirs.Add(*pInfo->pStrings->pTargetFolder2);
-	aryDays.Add(2);
-
-	if (aryDirs.GetSize() != aryDays.GetSize())
+	for (int nDir = 0; nDir < aryDirs->GetSize(); nDir++)
 	{
-		AfxMessageBox(_T("Internal error"));
-		return 0;
-	}
-
-	pInfo->pLogger->AddToLogByString(_T("Cleaning analysed dirs"));
-
-	for (int nDir = 0; nDir < aryDirs.GetSize(); nDir++)
-	{
-		CString strDir = aryDirs.GetAt(nDir);
-		DWORD dwDaysToKeep = aryDays.GetAt(nDir);
+		CString strDir = aryDirs->GetAt(nDir);
+		DWORD dwDaysToKeep = aryDays->GetAt(nDir);
 
 		pInfo->pLogger->AddToLogByString(_T("Cleaning folder - ") + strDir);
 
@@ -271,7 +147,7 @@ UINT CleanUpThread(void* pointer)
 			CString strSuffix = strFile.Mid(nDot);
 			strSuffix.MakeUpper();
 
-			if (strSuffix == _T(".XLS") && strFile.Left(13) != *pInfo->pStrings->pTargetFolder1)
+			if (strSuffix == _T(".XLS") && strFile.Left(13) != _T("C:\\Temp\\TargetFolders\\Folder1"))
 				continue;
 
 			if (strSuffix == _T(".BAT"))
@@ -307,6 +183,119 @@ UINT CleanUpThread(void* pointer)
 		}
 	}
 
+}
+
+void ListFileSourceFolders(void* pointer)
+{
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
+
+	CStringArray aryDirs;
+	aryDirs.SetSize(0, 1000);
+	CDWordArray aryDays;
+	aryDays.SetSize(0, 1000);
+
+	void* ptr = nullptr;
+	pInfo->pIniMapping->Lookup(_T("Add"), ptr);
+
+	if (ptr != nullptr)
+	{
+		CArray<ConfigurationActionItem*>* items = (CArray<ConfigurationActionItem*>*)ptr;
+		if (items != nullptr)
+		{
+			int count = (int)items->GetCount();
+
+			for (int i = 0; i < count; i++)
+			{
+				CStringArray aryListFileSourceFolders;
+
+				FileOperations::ListAllFiles(pInfo->pLogger, *items->GetAt(i)->GetFolderPath(), &aryListFileSourceFolders,
+					items->GetAt(i)->GetDirsOnlyFlag(), items->GetAt(i)->GetDontRecurseFlag());
+
+				// _wtoi seems to cause memory leak here and I'm not sure why. To prove set days to 0 and comment out _wtoi
+				int days = _wtoi(*items->GetAt(i)->GetRetentionDays());
+				CString fExtension = *items->GetAt(i)->GetFileExtensions();
+
+				if (items->GetAt(i)->GetDirsOnlyFlag() == true && items->GetAt(i)->GetDontRecurseFlag() == true)
+				{
+					for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
+					{
+						CString strFolder = aryListFileSourceFolders.GetAt(nFolder) + _T("Folder1");
+						aryDirs.Add(strFolder + "\\" + fExtension);
+						aryDays.Add(days);
+					}
+				}
+				else if (items->GetAt(i)->GetDirsOnlyFlag() == true && items->GetAt(i)->GetDontRecurseFlag() == false)
+				{
+					for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
+					{
+						CString strFolder = aryListFileSourceFolders.GetAt(nFolder);
+						strFolder.MakeUpper();
+
+						if (strFolder.Find(_T("\\FOLDER1\\")) != -1)
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+						else if (strFolder.Find(_T("\\FOLDER2\\")) != -1)
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+						else if (strFolder.Find(_T("\\FOLDER3\\")) != -1)
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+						else
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+					}
+				}
+				else
+				{
+					aryDirs.Add(*items->GetAt(i)->GetFolderPath() + _T("Folder1"));
+					aryDays.Add(days);
+
+					aryDirs.Add(*items->GetAt(i)->GetFolderPath() + _T("Folder2"));
+					aryDays.Add(days);
+				}
+
+				days = 0;
+				fExtension.Empty();
+				aryListFileSourceFolders.RemoveAll();
+			}
+		}
+	}
+
+	Delete(pInfo, &aryDirs, &aryDays);
+}
+
+UINT CleanUpThread(void* pointer)
+{
+	CString strMess;
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
+	CWaitCursor wait;
+
+	COleDateTime dtNow = COleDateTime::GetCurrentTime();
+
+	HRESULT res = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+
+	pInfo->pLogger->AddToLogByString(_T("Cleanup thread started"));
+	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
+
+	Move(pInfo);
+
+	pInfo->pLogger->AddToLogByString(_T("Scanning"));
+
+	//Various folders
+	pInfo->pLogger->AddToLogByString(_T("Adding static dirs"));
+	pInfo->pLogger->AddToLogByString(_T("Cleaning analysed dirs"));
+
+	//Example folders
+	ListFileSourceFolders(pInfo);
+
 	strMess = _T("Clean up complete");
 	pInfo->pLogger->AddToLogByString(strMess);
 	::PostMessage(pInfo->hWndParent, WM_APP, (WPARAM)strMess.GetBuffer(0), true);
@@ -334,39 +323,11 @@ sCleanupInfo* CTechnicalTestDlg::InitialiseStructures(CString fPath)
 	pInfo->pApp = (CTechnicalTestApp*)AfxGetApp();
 	pInfo->pIniMapping = &m_InitMap;
 
-	pInfo->pStrings = new sConstStrings;
-	pInfo->pStrings->pListFileSource = new CString();
-	pInfo->pStrings->pListFileSource2 = new CString();
-	pInfo->pStrings->pTargetFolder1 = new CString();
-	pInfo->pStrings->pTargetFolder2 = new CString();
-	pInfo->pStrings->pMoveFileDest = new CString();
-	pInfo->pStrings->pMoveFileSource = new CString();
-	pInfo->pStrings->pConfigIni = new CString();
-
 	if (!fPath.IsEmpty())
 	{
-		pInfo->pStrings->pConfigIni->SetString(m_filePath);
+		FileOperations::ParseIniFileContent(pInfo->pLogger, m_filePath,
+			pInfo->pIniMapping, false, true, true);
 	}
-	else if (!pInfo->pStrings->pConfigIni->LoadStringW(IDS_CONFIGINI))
-	{
-		pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load Configuration.ini constant"));
-
-		if (!pInfo->pStrings->pListFileSource->LoadStringW(IDS_LISTFILESOURCE))
-			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource constant."));
-		if (!pInfo->pStrings->pListFileSource2->LoadStringW(IDS_LISTFILESOURCE2))
-			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load ListFileSource2 constant."));
-		if (!pInfo->pStrings->pTargetFolder1->LoadStringW(IDS_TARGETFOLDER1))
-			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
-		if (!pInfo->pStrings->pTargetFolder2->LoadStringW(IDS_TARGETFOLDER2))
-			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load TargetFolder1 constant."));
-		if (!pInfo->pStrings->pMoveFileSource->LoadStringW(IDS_MOVEFILESOURCE))
-			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileSource constant."));
-		if (!pInfo->pStrings->pMoveFileDest->LoadStringW(IDS_MOVEFILEDEST))
-			pInfo->pLogger->AddToLogByString(_T("IMPORTANT: unable to load MoveFileDest constant"));
-	}
-
-	FileOperations::ParseIniFileContent(pInfo->pLogger, *pInfo->pStrings->pConfigIni, 
-								pInfo->pIniMapping, false, true, true);
 
 	return pInfo;
 }
@@ -512,7 +473,8 @@ void CTechnicalTestDlg::OnEnChangeFilebrowsecontrol()
 
 void CTechnicalTestDlg::OnBnClickedLoadinibtn()
 {
-	sCleanupInfo* pInfo = m_filePath.IsEmpty() == false ? InitialiseStructures(m_filePath) : InitialiseStructures(_T(""));
+	sCleanupInfo* pInfo;
+	pInfo = m_filePath.IsEmpty() == false ? InitialiseStructures(m_filePath) : InitialiseStructures(_T(""));
 
 	// TODO: Add your control notification handler code here
 	AfxBeginThread(CleanUpThread, pInfo, THREAD_PRIORITY_NORMAL, 0);

@@ -74,7 +74,7 @@ void FileOperations::ListAllFiles(Logger* pLogger, const CString strMask, CStrin
 
 // Intention to parse the ini file and map actions
 // 
-bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*>* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
+bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFileStr, CMapStringToPtr* initMapping, bool flgDirsOnly, bool flgDontRecurse, bool flgDirsAlso)
 {
 
 	// Check against empty ini string
@@ -136,7 +136,6 @@ bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFile
 				res = c.Tokenize(_T("\r\n"), currentPos);
 				while (res != _T(""))
 				{
-					pLogger->AddToLogByString(res);
 
 					if (res.CompareNoCase(_T("[TechnicalTestConfiguration]")) != 0)
 					{
@@ -150,23 +149,25 @@ bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFile
 				{
 					ConfigurationActionItem* cfg = new ConfigurationActionItem(&content[i]);
 					
-					CArray<ConfigurationActionItem*>* itemArray;
+					void* itemArray;
 					
-					if (initMapping->Lookup(cfg->GetActionName(), itemArray) != 0)
+					if (initMapping->Lookup(*cfg->GetActionName(), itemArray) != 0)
 					{
 						if (itemArray != nullptr)
 						{
-							itemArray->Add(cfg);
-							initMapping->SetAt(cfg->GetActionName(), itemArray);
+							CArray<ConfigurationActionItem*>* _itemArray = (CArray<ConfigurationActionItem*>*)itemArray;
+							_itemArray->Add(cfg);
+							initMapping->SetAt(*cfg->GetActionName(), itemArray);
 						}
 					}
 					else
 					{
-						itemArray = new CArray<ConfigurationActionItem*>();
-						if (itemArray != nullptr)
+						CArray<ConfigurationActionItem*>* _itemArray = new CArray<ConfigurationActionItem*>();
+						if (_itemArray != nullptr)
 						{
-							itemArray->Add(cfg);
-							initMapping->SetAt(cfg->GetActionName(), itemArray);
+							_itemArray->Add(cfg);
+							itemArray = _itemArray;
+							initMapping->SetAt(*cfg->GetActionName(), itemArray);
 						}
 						
 					}

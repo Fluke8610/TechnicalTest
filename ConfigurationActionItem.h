@@ -20,12 +20,16 @@ public:
 	CString* GetFolderPath();
 	CString* GetFileExtensions();
 	CString* GetRetentionDays();
+	bool	 GetDirsOnlyFlag();
+	bool	 GetDontRecurseFlag();
 
 private:
 	void AddAction(CString* action);
 	void AddFolderPath(CString* path);
 	void AddFileExtensions(CString* extension);
 	void AddRetentionDays(CString* retention);
+	void AddDirsOnlyFlag(CString* dirsOnly);
+	void AddDontRecurseFlag(CString* dontRecurse);
 
 	void ParseContentString(CString* content);
 
@@ -35,6 +39,8 @@ protected:
 	CString* pFolderPath		= nullptr;
 	CString* pFileExtensions	= nullptr;
 	CString* pRetentionDays		= nullptr;
+	bool	 pDirsOnly			= true;
+	bool	 pDontRecurse		= true;
 
 
 };

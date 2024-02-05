@@ -7,21 +7,46 @@
 #include "Logger.h"
 #include "ConfigurationActionItem.h"
 
+struct sCleanupInfo
+{
+	HWND hWndParent;
+	Logger* pLogger;
+	CTechnicalTestApp* pApp;
+	CMapStringToPtr* pIniMapping;
+};
+
 // CTechnicalTestDlg dialog
 class CTechnicalTestDlg : public CDialogEx
 {
 // Construction
 public:
 	CTechnicalTestDlg(CWnd* pParent = nullptr);	// standard constructor
+
+	//CTechnicalTestDlg* GetDialogInstance() { return this->m_Instance; }
+
+	//void CleanUp(sCleanupInfo* info);
+
+	//void Move();
+	//void Find();
+	//void Delete();
+
+	//void ListFileSourceFolders();
+
 private:
 	int m_nActiveThreads;
 	Logger m_Logger;
-
+	
+	sCleanupInfo* pInfo = nullptr;
 	/*
 	* CString for the key
 	* Array of configuration items, class holds an Conf object, can have multiple of the same action.
 	*/
-	CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*> m_InitMap;
+	//CMap<CString*, CString*, CArray<ConfigurationActionItem*>*, CArray<ConfigurationActionItem*>*> m_InitMap;
+	CMapStringToPtr m_InitMap;
+
+	CTechnicalTestDlg* m_Instance = this;
+
+private: // Functions
 
 	struct sCleanupInfo* InitialiseStructures(CString fPath = _T(""));
 	
