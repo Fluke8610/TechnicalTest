@@ -13,7 +13,6 @@ struct sCleanupInfo
 	Logger* pLogger;
 	CTechnicalTestApp* pApp;
 	CMapStringToPtr* pIniMapping;
-	class CTechnicalTestDlg* pInstance;
 };
 
 // CTechnicalTestDlg dialog
@@ -23,15 +22,15 @@ class CTechnicalTestDlg : public CDialogEx
 public:
 	CTechnicalTestDlg(CWnd* pParent = nullptr);	// standard constructor
 
-	CTechnicalTestDlg* GetDialogInstance() { return this->m_Instance; }
+	//CTechnicalTestDlg* GetDialogInstance() { return this->m_Instance; }
 
-	void CleanUp(sCleanupInfo* info);
+	//void CleanUp(sCleanupInfo* info);
 
-	void Move();
-	void Find();
-	void Delete();
+	//void Move();
+	//void Find();
+	//void Delete();
 
-	void ListFileSourceFolders();
+	//void ListFileSourceFolders();
 
 private:
 	int m_nActiveThreads;

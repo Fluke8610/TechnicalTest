@@ -136,7 +136,6 @@ bool FileOperations::ParseIniFileContent(Logger* pLogger, const CString& iniFile
 				res = c.Tokenize(_T("\r\n"), currentPos);
 				while (res != _T(""))
 				{
-					pLogger->AddToLogByString(res);
 
 					if (res.CompareNoCase(_T("[TechnicalTestConfiguration]")) != 0)
 					{

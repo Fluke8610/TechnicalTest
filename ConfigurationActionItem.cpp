@@ -125,7 +125,8 @@ CString* ConfigurationActionItem::GetRetentionDays()
 	}
 	else
 	{
-		return new CString(_T(""));
+		// Random default value as 0 didn't make sense.
+		return new CString(_T("10"));
 	}
 }
 

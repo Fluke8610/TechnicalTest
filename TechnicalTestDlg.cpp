@@ -16,17 +16,6 @@
 
 // CAboutDlg dialog used for App About
 
-//struct sConstStrings
-//{
-//	CString* pListFileSource;
-//	CString* pListFileSource2;
-//	CString* pTargetFolder1;
-//	CString* pTargetFolder2;
-//	CString* pMoveFileSource;
-//	CString* pMoveFileDest;
-//	CString* pConfigIni;
-//};
-
 class CAboutDlg : public CDialogEx
 {
 public:
@@ -62,7 +51,6 @@ END_MESSAGE_MAP()
 
 void CleanUp(void* pointer)
 {
-
 	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
 
 	if (pInfo->pIniMapping != nullptr)
@@ -94,8 +82,8 @@ void CleanUp(void* pointer)
 						}
 					}
 
-					delete items;
-					items = nullptr;
+					delete itm;
+					itm = nullptr;
 				}
 			}
 		}
@@ -107,100 +95,12 @@ void CleanUp(void* pointer)
 	delete pInfo;
 }
 
-UINT CleanUpThread(void* pointer)
+void Move(void* pointer)
 {
-	CString strMess;
 	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
-	CTechnicalTestDlg* pDlg = pInfo->pInstance;
-	CWaitCursor wait;
 
-	COleDateTime dtNow = COleDateTime::GetCurrentTime();
-
-	HRESULT res = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
-
-	pInfo->pLogger->AddToLogByString(_T("Cleanup thread started"));
-	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
-
-	pDlg->Move();
-
-	pInfo->pLogger->AddToLogByString(_T("Scanning"));
-
-	//Various folders
-	pInfo->pLogger->AddToLogByString(_T("Adding static dirs"));
-
-	//Example folders
-	pDlg->ListFileSourceFolders();
-
-	pInfo->pLogger->AddToLogByString(_T("Cleaning analysed dirs"));
-
-	strMess = _T("Clean up complete");
-	pInfo->pLogger->AddToLogByString(strMess);
-	::PostMessage(pInfo->hWndParent, WM_APP, (WPARAM)strMess.GetBuffer(0), true);
-
-	pDlg->CleanUp(pInfo);
-
-	::CoUninitialize();
-	return 0;
-}
-
-CTechnicalTestDlg::CTechnicalTestDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_TECHNICALTEST_DIALOG, pParent)
-	, m_filePath(_T(""))
-{
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-	m_nActiveThreads = 0;
-}
-
-void CTechnicalTestDlg::CleanUp(sCleanupInfo* pInfo)
-{
-	//sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
-
-	if (pInfo->pIniMapping != nullptr)
-	{
-		POSITION pos = pInfo->pIniMapping->GetStartPosition();
-		for (int nMap = 0; pos != NULL; nMap++)
-		{
-			CString key;
-			void* items;
-			pInfo->pIniMapping->GetNextAssoc(pos, key, items);
-
-			if (items != nullptr)
-			{
-				CArray<ConfigurationActionItem*>* itm = (CArray<ConfigurationActionItem*>*)items;
-				if (itm != nullptr)
-				{
-					for (int iMap = (int)itm->GetCount() - 1; iMap >= 0; iMap--)
-					{
-						if (itm->GetAt(iMap) != nullptr)
-						{
-							ConfigurationActionItem* it = itm->ElementAt(iMap);
-							itm->RemoveAt(iMap);
-
-							if (it != nullptr)
-							{
-								delete it;
-								it = nullptr;
-							}
-						}
-					}
-
-					delete items;
-					items = nullptr;
-				}
-			}
-		}
-
-		pInfo->pIniMapping->RemoveAll();
-
-	}
-
-	delete pInfo;
-}
-
-void CTechnicalTestDlg::Move()
-{
 	CStringArray aryFilesToMove;
-	
+
 	void* ptr = nullptr;
 	pInfo->pIniMapping->Lookup(_T("Move"), ptr);
 
@@ -212,7 +112,7 @@ void CTechnicalTestDlg::Move()
 			for (int i = 0; i < (int)items->GetCount(); i++)
 			{
 				FileOperations::ListAllFiles(pInfo->pLogger, *items->GetAt(i)->GetFolderPath(), &aryFilesToMove);
-				
+
 				for (int nFile = 0; nFile < aryFilesToMove.GetSize(); nFile++)
 				{
 					CString strFile = aryFilesToMove.GetAt(nFile);
@@ -224,92 +124,14 @@ void CTechnicalTestDlg::Move()
 	}
 }
 
-void CTechnicalTestDlg::Find()
+void Delete(void* pointer, CStringArray* aryDirs, CDWordArray* aryDays)
 {
-}
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
 
-void CTechnicalTestDlg::Delete()
-{
-}
-
-void CTechnicalTestDlg::ListFileSourceFolders()
-{
-	CStringArray aryListFileSourceFolders;
-
-	CStringArray aryDirs;
-	aryDirs.SetSize(0, 1000);
-	CDWordArray aryDays;
-	aryDays.SetSize(0, 1000);
-
-	void* ptr = nullptr;
-	pInfo->pIniMapping->Lookup(_T("Add"), ptr);
-
-	if (ptr != nullptr)
+	for (int nDir = 0; nDir < aryDirs->GetSize(); nDir++)
 	{
-		CArray<ConfigurationActionItem*>* items = (CArray<ConfigurationActionItem*>*)ptr;
-		if (items != nullptr)
-		{
-			for (int i = 0; i < (int)items->GetCount(); i++)
-			{
-				FileOperations::ListAllFiles(pInfo->pLogger, *items->GetAt(i)->GetFolderPath(), &aryListFileSourceFolders, 
-					items->GetAt(i)->GetDirsOnlyFlag(), items->GetAt(i)->GetDontRecurseFlag());
-
-				if (items->GetAt(i)->GetDirsOnlyFlag() == true && items->GetAt(i)->GetDontRecurseFlag() == true)
-				{
-					for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
-					{
-						CString strFolder = aryListFileSourceFolders.GetAt(nFolder) + _T("Folder1");
-						aryDirs.Add(strFolder + "\\*.*");
-						aryDays.Add(2);
-					}
-				}
-				else if (items->GetAt(i)->GetDirsOnlyFlag() == true && items->GetAt(i)->GetDontRecurseFlag() == false)
-				{
-					for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
-					{
-						CString strFolder = aryListFileSourceFolders.GetAt(nFolder);
-						strFolder.MakeUpper();
-
-
-
-						if (strFolder.Find(_T("\\FOLDER1\\")) != -1)
-						{
-							aryDirs.Add(strFolder + "*.*");
-							aryDays.Add(2);
-						}
-						else if (strFolder.Find(_T("\\FOLDER2\\")) != -1)
-						{
-							aryDirs.Add(strFolder + "*.*");
-							aryDays.Add(2);
-						}
-						else if (strFolder.Find(_T("\\FOLDER3\\")) != -1)
-						{
-							aryDirs.Add(strFolder + "*.*");
-							aryDays.Add(2);
-						}
-						else
-						{
-							aryDirs.Add(strFolder + "*.*");
-							aryDays.Add(2);
-						}
-					}
-				}
-				else
-				{
-						aryDirs.Add(*items->GetAt(i)->GetFolderPath() + _T("Folder1"));
-						aryDays.Add(2);
-
-						aryDirs.Add(*items->GetAt(i)->GetFolderPath() + _T("Folder2"));
-						aryDays.Add(2);
-				}						
-			}
-		}
-	}
-	
-	for (int nDir = 0; nDir < aryDirs.GetSize(); nDir++)
-	{
-		CString strDir = aryDirs.GetAt(nDir);
-		DWORD dwDaysToKeep = aryDays.GetAt(nDir);
+		CString strDir = aryDirs->GetAt(nDir);
+		DWORD dwDaysToKeep = aryDays->GetAt(nDir);
 
 		pInfo->pLogger->AddToLogByString(_T("Cleaning folder - ") + strDir);
 
@@ -360,6 +182,136 @@ void CTechnicalTestDlg::ListFileSourceFolders()
 			}
 		}
 	}
+
+}
+
+void ListFileSourceFolders(void* pointer)
+{
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
+
+	CStringArray aryDirs;
+	aryDirs.SetSize(0, 1000);
+	CDWordArray aryDays;
+	aryDays.SetSize(0, 1000);
+
+	void* ptr = nullptr;
+	pInfo->pIniMapping->Lookup(_T("Add"), ptr);
+
+	if (ptr != nullptr)
+	{
+		CArray<ConfigurationActionItem*>* items = (CArray<ConfigurationActionItem*>*)ptr;
+		if (items != nullptr)
+		{
+			int count = (int)items->GetCount();
+
+			for (int i = 0; i < count; i++)
+			{
+				CStringArray aryListFileSourceFolders;
+
+				FileOperations::ListAllFiles(pInfo->pLogger, *items->GetAt(i)->GetFolderPath(), &aryListFileSourceFolders,
+					items->GetAt(i)->GetDirsOnlyFlag(), items->GetAt(i)->GetDontRecurseFlag());
+
+				// _wtoi seems to cause memory leak here and I'm not sure why. To prove set days to 0 and comment out _wtoi
+				int days = _wtoi(*items->GetAt(i)->GetRetentionDays());
+				CString fExtension = *items->GetAt(i)->GetFileExtensions();
+
+				if (items->GetAt(i)->GetDirsOnlyFlag() == true && items->GetAt(i)->GetDontRecurseFlag() == true)
+				{
+					for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
+					{
+						CString strFolder = aryListFileSourceFolders.GetAt(nFolder) + _T("Folder1");
+						aryDirs.Add(strFolder + "\\" + fExtension);
+						aryDays.Add(days);
+					}
+				}
+				else if (items->GetAt(i)->GetDirsOnlyFlag() == true && items->GetAt(i)->GetDontRecurseFlag() == false)
+				{
+					for (int nFolder = 0; nFolder < aryListFileSourceFolders.GetSize(); nFolder++)
+					{
+						CString strFolder = aryListFileSourceFolders.GetAt(nFolder);
+						strFolder.MakeUpper();
+
+						if (strFolder.Find(_T("\\FOLDER1\\")) != -1)
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+						else if (strFolder.Find(_T("\\FOLDER2\\")) != -1)
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+						else if (strFolder.Find(_T("\\FOLDER3\\")) != -1)
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+						else
+						{
+							aryDirs.Add(strFolder + fExtension);
+							aryDays.Add(days);
+						}
+					}
+				}
+				else
+				{
+					aryDirs.Add(*items->GetAt(i)->GetFolderPath() + _T("Folder1"));
+					aryDays.Add(days);
+
+					aryDirs.Add(*items->GetAt(i)->GetFolderPath() + _T("Folder2"));
+					aryDays.Add(days);
+				}
+
+				days = 0;
+				fExtension.Empty();
+				aryListFileSourceFolders.RemoveAll();
+			}
+		}
+	}
+
+	Delete(pInfo, &aryDirs, &aryDays);
+}
+
+UINT CleanUpThread(void* pointer)
+{
+	CString strMess;
+	sCleanupInfo* pInfo = (sCleanupInfo*)pointer;
+	CWaitCursor wait;
+
+	COleDateTime dtNow = COleDateTime::GetCurrentTime();
+
+	HRESULT res = ::CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+
+	pInfo->pLogger->AddToLogByString(_T("Cleanup thread started"));
+	pInfo->pLogger->AddToLogByString(_T("Moving example files"));
+
+	Move(pInfo);
+
+	pInfo->pLogger->AddToLogByString(_T("Scanning"));
+
+	//Various folders
+	pInfo->pLogger->AddToLogByString(_T("Adding static dirs"));
+	pInfo->pLogger->AddToLogByString(_T("Cleaning analysed dirs"));
+
+	//Example folders
+	ListFileSourceFolders(pInfo);
+
+	strMess = _T("Clean up complete");
+	pInfo->pLogger->AddToLogByString(strMess);
+	::PostMessage(pInfo->hWndParent, WM_APP, (WPARAM)strMess.GetBuffer(0), true);
+
+	CleanUp(pInfo);
+
+	::CoUninitialize();
+	return 0;
+}
+
+CTechnicalTestDlg::CTechnicalTestDlg(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_TECHNICALTEST_DIALOG, pParent)
+	, m_filePath(_T(""))
+{
+	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_nActiveThreads = 0;
 }
 
 sCleanupInfo* CTechnicalTestDlg::InitialiseStructures(CString fPath)
@@ -370,7 +322,6 @@ sCleanupInfo* CTechnicalTestDlg::InitialiseStructures(CString fPath)
 	pInfo->pLogger = &m_Logger;
 	pInfo->pApp = (CTechnicalTestApp*)AfxGetApp();
 	pInfo->pIniMapping = &m_InitMap;
-	pInfo->pInstance = m_Instance;
 
 	if (!fPath.IsEmpty())
 	{
@@ -522,8 +473,8 @@ void CTechnicalTestDlg::OnEnChangeFilebrowsecontrol()
 
 void CTechnicalTestDlg::OnBnClickedLoadinibtn()
 {
-	if (pInfo == nullptr)
-		sCleanupInfo* pInfo = m_filePath.IsEmpty() == false ? InitialiseStructures(m_filePath) : InitialiseStructures(_T(""));
+	sCleanupInfo* pInfo;
+	pInfo = m_filePath.IsEmpty() == false ? InitialiseStructures(m_filePath) : InitialiseStructures(_T(""));
 
 	// TODO: Add your control notification handler code here
 	AfxBeginThread(CleanUpThread, pInfo, THREAD_PRIORITY_NORMAL, 0);
