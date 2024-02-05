@@ -68,6 +68,16 @@ void ConfigurationActionItem::Add(CString& name, CString& value)
 	{
 		AddRetentionDays(&value);
 	}
+
+	if (name.CompareNoCase(_T("FlagDirsOnly")) == 0)
+	{
+		AddDirsOnlyFlag(&value);
+	}
+
+	if (name.CompareNoCase(_T("FlagDontRecurse")) == 0)
+	{
+		AddDontRecurseFlag(&value);
+	}
 }
 
 CString* ConfigurationActionItem::GetActionName()
@@ -119,6 +129,16 @@ CString* ConfigurationActionItem::GetRetentionDays()
 	}
 }
 
+bool ConfigurationActionItem::GetDirsOnlyFlag()
+{
+	return pDirsOnly;
+}
+
+bool ConfigurationActionItem::GetDontRecurseFlag()
+{
+	return pDontRecurse;
+}
+
 void ConfigurationActionItem::AddAction(CString* action)
 {
 	pActionName = new CString(*action);
@@ -137,6 +157,30 @@ void ConfigurationActionItem::AddFileExtensions(CString* extension)
 void ConfigurationActionItem::AddRetentionDays(CString* retention)
 {
 	pRetentionDays = new CString(*retention);
+}
+
+void ConfigurationActionItem::AddDirsOnlyFlag(CString* dirsOnly)
+{
+	if (dirsOnly->CompareNoCase(_T("true")) == 0)
+	{
+		pDirsOnly = true;
+	}
+	else
+	{
+		pDirsOnly = false;
+	}
+}
+
+void ConfigurationActionItem::AddDontRecurseFlag(CString* dontRecurse)
+{
+	if (dontRecurse->CompareNoCase(_T("true")) == 0)
+	{
+		pDontRecurse = true;
+	}
+	else
+	{
+		pDontRecurse = false;
+	}
 }
 
 void ConfigurationActionItem::ParseContentString(CString* content)
